@@ -54,13 +54,13 @@ class GameEngine:
         dx = 0
         dy = 0
 
-        if keys_pressed[pygame.K_UP]:
+        if keys_pressed[pygame.K_w]:
             dy -= PLAYER_SPEED
-        if keys_pressed[pygame.K_DOWN]:
+        if keys_pressed[pygame.K_s]:
             dy += PLAYER_SPEED
-        if keys_pressed[pygame.K_LEFT]:
+        if keys_pressed[pygame.K_a]:
             dx -= PLAYER_SPEED
-        if keys_pressed[pygame.K_RIGHT]:
+        if keys_pressed[pygame.K_d]:
             dx += PLAYER_SPEED
 
         self.player.move_by(dx, dy)
