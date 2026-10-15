@@ -5,7 +5,13 @@ from game.puck import Puck
 from game.paddle import Paddle
 from game.ai import ComputerAI
 from game.collisions import handle_paddle_collision
-from game.renderer import WIDTH, HEIGHT, MARGIN, GOAL_TOP, GOAL_BOTTOM
+from game.renderer import (
+    WIDTH,
+    HEIGHT,
+    MARGIN,
+    GOAL_TOP,
+    GOAL_BOTTOM,
+)
 
 PLAYER_SPEED = 6
 PUCK_RADIUS = 12
@@ -40,6 +46,10 @@ class GameEngine:
 
         self.ai = ComputerAI()
 
+        # Task 2: Match scores
+        self.player_score = 0
+        self.computer_score = 0
+
     def _launch_puck(self):
         angle_choices = [0.3, 0.6, -0.3, -0.6]
         direction = random.choice([-1, 1])
@@ -54,6 +64,7 @@ class GameEngine:
         dx = 0
         dy = 0
 
+        # WASD controls
         if keys_pressed[pygame.K_w]:
             dy -= PLAYER_SPEED
         if keys_pressed[pygame.K_s]:
@@ -68,15 +79,13 @@ class GameEngine:
     def update(self):
         self.ai.update(self.computer, self.puck)
 
-        # Save the puck's position before moving it.
+        # Task 1: Save the puck's previous position.
         previous_x = self.puck.x
         previous_y = self.puck.y
 
-        # Update the puck's position and handle wall collisions.
         self.puck.move()
         self.puck.bounce_off_walls(HEIGHT, MARGIN)
 
-        # Detect and resolve collisions with both paddles.
         handle_paddle_collision(
             self.puck,
             self.player,
@@ -91,28 +100,41 @@ class GameEngine:
             previous_y,
         )
 
-        # Handle goals after collision processing.
         self._handle_goals()
 
     def _handle_goals(self):
+        # Puck enters the left goal: computer scores.
         if self.puck.x - self.puck.radius < MARGIN:
             if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
+                self.computer_score += 1
                 self._reset_puck()
             else:
                 self.puck.x = MARGIN + self.puck.radius
                 self.puck.vx = abs(self.puck.vx)
 
+        # Puck enters the right goal: player scores.
         elif self.puck.x + self.puck.radius > WIDTH - MARGIN:
             if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
+                self.player_score += 1
                 self._reset_puck()
             else:
                 self.puck.x = WIDTH - MARGIN - self.puck.radius
                 self.puck.vx = -abs(self.puck.vx)
 
     def _reset_puck(self):
+        # Keep the existing reset behavior for now.
+        # Task 4 will implement a proper relaunch after every goal.
         self.puck.x = WIDTH / 2
         self.puck.y = HEIGHT / 2
-        self._launch_puck()
+        self.puck.vx = 0
+        self.puck.vy = 0
+
+    def get_winner(self):
+        if self.player_score > self.computer_score:
+            return "Player wins!"
+        elif self.computer_score > self.player_score:
+            return "Computer wins!"
+        return "Draw!"
 
     def draw(self, surface, font):
         from game import renderer
@@ -125,3 +147,20 @@ class GameEngine:
             surface, self.computer, renderer.COLOR_COMPUTER
         )
         renderer.draw_puck(surface, self.puck)
+
+        # Display both scores.
+        renderer.draw_text(
+            surface,
+            font,
+            f"Player: {self.player_score}",
+            (MARGIN + 15, MARGIN + 10),
+            renderer.COLOR_PLAYER,
+        )
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Computer: {self.computer_score}",
+            (WIDTH - 230, MARGIN + 10),
+            renderer.COLOR_COMPUTER,
+        )
