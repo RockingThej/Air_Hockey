@@ -1,5 +1,6 @@
 
 import random
+import time
 
 from game.puck import Puck
 from game.paddle import Paddle
@@ -17,12 +18,12 @@ PLAYER_SPEED = 6
 PUCK_RADIUS = 12
 PADDLE_RADIUS = 28
 INITIAL_PUCK_SPEED = 4.5
+MATCH_DURATION = 30
 
 
 class GameEngine:
     def __init__(self):
         self.puck = Puck(WIDTH / 2, HEIGHT / 2, PUCK_RADIUS)
-        self._launch_puck()
 
         self.player = Paddle(
             x=WIDTH * 0.15,
@@ -46,9 +47,17 @@ class GameEngine:
 
         self.ai = ComputerAI()
 
-        # Task 2: Match scores
+        # Task 2: Scoring
         self.player_score = 0
         self.computer_score = 0
+
+        # Task 3: Timer
+        self.match_duration = MATCH_DURATION
+        self.start_time = time.monotonic()
+        self.time_left = MATCH_DURATION
+        self.match_over = False
+
+        self._launch_puck()
 
     def _launch_puck(self):
         angle_choices = [0.3, 0.6, -0.3, -0.6]
@@ -60,6 +69,9 @@ class GameEngine:
 
     def handle_input(self, keys_pressed):
         import pygame
+
+        if self.match_over:
+            return
 
         dx = 0
         dy = 0
@@ -76,10 +88,30 @@ class GameEngine:
 
         self.player.move_by(dx, dy)
 
+    def update_timer(self):
+        elapsed = time.monotonic() - self.start_time
+        self.time_left = max(
+            0,
+            self.match_duration - int(elapsed),
+        )
+
+        if self.time_left == 0:
+            self.match_over = True
+            self.puck.vx = 0
+            self.puck.vy = 0
+
     def update(self):
+        if self.match_over:
+            return
+
+        self.update_timer()
+
+        if self.match_over:
+            return
+
         self.ai.update(self.computer, self.puck)
 
-        # Task 1: Save the puck's previous position.
+        # Task 1: Track the puck's previous position.
         previous_x = self.puck.x
         previous_y = self.puck.y
 
@@ -103,7 +135,7 @@ class GameEngine:
         self._handle_goals()
 
     def _handle_goals(self):
-        # Puck enters the left goal: computer scores.
+        # Left goal: computer scores.
         if self.puck.x - self.puck.radius < MARGIN:
             if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
                 self.computer_score += 1
@@ -112,7 +144,7 @@ class GameEngine:
                 self.puck.x = MARGIN + self.puck.radius
                 self.puck.vx = abs(self.puck.vx)
 
-        # Puck enters the right goal: player scores.
+        # Right goal: player scores.
         elif self.puck.x + self.puck.radius > WIDTH - MARGIN:
             if GOAL_TOP < self.puck.y < GOAL_BOTTOM:
                 self.player_score += 1
@@ -122,8 +154,8 @@ class GameEngine:
                 self.puck.vx = -abs(self.puck.vx)
 
     def _reset_puck(self):
-        # Keep the existing reset behavior for now.
-        # Task 4 will implement a proper relaunch after every goal.
+        # Task 4 is intentionally NOT implemented.
+        # The puck returns to the center but remains motionless.
         self.puck.x = WIDTH / 2
         self.puck.y = HEIGHT / 2
         self.puck.vx = 0
@@ -140,6 +172,7 @@ class GameEngine:
         from game import renderer
 
         renderer.draw_table(surface)
+
         renderer.draw_paddle(
             surface, self.player, renderer.COLOR_PLAYER
         )
@@ -148,7 +181,6 @@ class GameEngine:
         )
         renderer.draw_puck(surface, self.puck)
 
-        # Display both scores.
         renderer.draw_text(
             surface,
             font,
@@ -161,6 +193,21 @@ class GameEngine:
             surface,
             font,
             f"Computer: {self.computer_score}",
-            (WIDTH - 230, MARGIN + 10),
+            (WIDTH - 180, MARGIN + 10),
             renderer.COLOR_COMPUTER,
         )
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Time: {self.time_left}",
+            (WIDTH // 2 - 40, MARGIN + 10),
+            renderer.COLOR_TEXT,
+        )
+
+        if self.match_over:
+            renderer.draw_banner(
+                surface,
+                font,
+                self.get_winner(),
+            )
