@@ -154,12 +154,9 @@ class GameEngine:
                 self.puck.vx = -abs(self.puck.vx)
 
     def _reset_puck(self):
-        # Task 4 is intentionally NOT implemented.
-        # The puck returns to the center but remains motionless.
         self.puck.x = WIDTH / 2
         self.puck.y = HEIGHT / 2
-        self.puck.vx = 0
-        self.puck.vy = 0
+        self._launch_puck()
 
     def get_winner(self):
         if self.player_score > self.computer_score:
